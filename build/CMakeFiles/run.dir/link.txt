@@ -1,1 +1,0 @@
-/usr/bin/c++  -Wall -Werror -O2 -g  -rdynamic CMakeFiles/run.dir/src/rsa.cpp.o CMakeFiles/run.dir/src/main.cpp.o  -o run 
