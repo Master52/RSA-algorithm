@@ -1,62 +1,58 @@
 import random
-import math
 
-__DEBUG__ = True
 PRIME_LIMIT = 1000000000000
+__DEBUG__ = False
 
-class RSA(object):
+def generate(p_num1,p_num2,key_size = 128):
+    n = p_num1 * p_num2
+    tot = (p_num1 - 1) * (p_num2 - 1)
+    e = generatePublicKey(tot,key_size)
+    d = generatePrivateKey(e,tot)
 
-    def __init__(self,public_key = 0,private_key = 0,n = 0,phi = 0):
-        self.__public_key = public_key
-        self.__private_key = private_key
-        self.__n = n
-        self.__phi = phi
+    if __DEBUG__ == True:
+        print(f"n =    {n}" )
+        print(f"tot = {tot}")
+        print(f"e =    {e}" )
+        print(f"d =    {d}" )
 
-    def generate(self,p_num1,p_num2,key_size = 32):
-        self.__n = p_num1 * p_num2
-        self.__phi = (p_num1 - 1) * (p_num2 - 1)
-        self.__public_key = self.generatePublicKey(key_size)
-        self.__private_key = self.generatePrivateKey()
+    return e,d,n
 
-        if __DEBUG__:
-            print(f"""n = {self.__n}\nphi = {self.__phi}\npublicKey = {self.__public_key}\nprivateKey = {self.__private_key}""")
-        self.export()
-
-    def export(self):
-        with open("public.key","w") as fp:
-            fp.write(f"RSA PUBLIC KEY:\n{self.__public_key}\nEND")
-            print("Public Key Written")
-        with open("private.key","w") as fp:
-            fp.write(f"RSA PRIVATE KEY:\n{self.__private_key}\n{self.__n}\nEND")
-            print("Private Key written")
+def export(e,d,n):
+    ## Saving keys to file
+    with open("public.key","w") as fp:
+        fp.write(f"RSA PUBLIC KEY:\n{e}\n{n}\nEND")
+        print("Public Key Written")
+    with open("private.key","w") as fp:
+        fp.write(f"RSA PRIVATE KEY:\n{d}\n{n}\nEND")
+        print("Private Key written")
 
 
-    def generatePublicKey(self,key_size):
+def generatePublicKey(tot,key_size):
+    e = random.randint(2**(key_size-1),2**key_size - 1)
+    g = gcd(e,tot)
+    while g != 1:
         e = random.randint(2**(key_size-1),2**key_size - 1)
-        g = gcd(e,self.__phi)
-        while g != 1:
-            e = random.randint(2**(key_size-1),2**key_size - 1)
-            g = gcd(e,self.__phi)
+        g = gcd(e,tot)
 
-        return e
+    return e
 
-    def generatePrivateKey(self):
-        d =  egcd(self.__public_key,self.__phi)[1]
-        d = d % self.__phi
-        if d < 0 :
-            d += self.__phi
-        return d
+def generatePrivateKey(e,tot):
+    d =  egcd(e,tot)[1]
+    d = d % tot
+    if d < 0 :
+        d += tot
+    return d
 
-    def encrypt(self,text):
-        ctext = [pow(ord(char),self.__public_key,self.__n) for char in text]
-        return ctext
+def encrypt(text,e,n):
+    ctext = [pow(ord(char),e,n) for char in text]
+    return ctext
 
-    def decrypt(self,ctext):
-        try:
-            text = [chr(pow(char,self.__private_key,self.__n)) for char in ctext]
-            return "".join(text)
-        except TypeError as e:
-            print(e)
+def decrypt(ctext,d,n):
+    try:
+        text = [chr(pow(char,d,n)) for char in ctext]
+        return "".join(text)
+    except TypeError as e:
+        print(e)
 
 
 def egcd(a,b):
@@ -68,39 +64,44 @@ def egcd(a,b):
     return (g, x - (b // a) * y, y)
 
 
-def gcd(e,phi):
+def gcd(e,tot):
     temp = 0
     while True:
-        temp = e % phi
+        temp = e % tot
         if temp == 0:
-            return phi
-        e = phi
-        phi = temp
+            return tot
+        e = tot
+        tot = temp
 
 
 def isPrime(num):
     if num < 2 : return False
     if num == 2 : return True
     if num & 0x01 == 0 : return False
-    n = int(math.sqrt(num))
+    n = int(num ** 0.5 )
     for i in range(3,n,2):
         if num % i == 0:
             return False
 
     return True
 
-def getPrime(limit = 2048):
+def getPrime(limit = PRIME_LIMIT):
     num = 0
     while True:
         num = random.randint(0,limit)
         if isPrime(num):
             break
+    if __DEBUG__ == True:
+        print(f"Generated Prime number: {num}")
     return num
 
 if __name__ == '__main__':
-    rsa = RSA()
-    rsa.generate(getPrime(PRIME_LIMIT),getPrime(PRIME_LIMIT),key_size = 128)
+    e,d,n = generate(getPrime(),getPrime(),key_size = 128)
+    export(e,d,n)
     plainText = "This is plain Text"
-    cipher = rsa.encrypt(plainText)
-    dicipher = rsa.decrypt(cipher)
+    print(f"\nOriginal Text: {plainText}")
+    cipher = encrypt(plainText,e,n)
+    print(f"\ncipher Text: {cipher}")
+    dicipher = decrypt(cipher,d,n)
+    print(f"\ndecryped Text: {dicipher}")
 
